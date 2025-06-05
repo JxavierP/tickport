@@ -35,6 +35,8 @@ func main()  {
 		})
 	})
 	router.GET("/health", handlers.HealthCheckHandler(db))
+	router.GET("/tickets", handlers.GetAllTicketsHandler(db))
+	router.GET("/ticket/:id", handlers.GetTicketByIDHandler(db))
 	router.POST("/tickets", handlers.CreateTicketHandler(db))
 	router.Run()
 }

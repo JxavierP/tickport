@@ -17,6 +17,89 @@ type CreateTicketRequest struct {
 	Status      string `json:"status"`
 }
 
+func GetAllTicketsHandler(db *sql.DB) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		rows, err := db.Query(`SELECT * FROM tickets`)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tickets"})
+		}
+		defer rows.Close()
+
+		var tickets []models.Ticket
+
+		for rows.Next() {
+			var t models.Ticket
+			var idStr string
+			if err := rows.Scan(
+				&idStr,
+				&t.Title,
+				&t.Description,
+				&t.Priority,
+				&t.Status,
+				&t.CreatedAt,
+				&t.UpdatedAt,
+			); err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan ticket"})
+				return
+			}
+
+			t.ID, err = uuid.Parse(idStr)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid UUID"})
+				return
+			}
+
+			tickets = append(tickets, t)
+		}
+		ctx.JSON(http.StatusOK, tickets)
+	}
+}
+
+func GetTicketByIDHandler(db *sql.DB) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        idStr := c.Param("id")
+
+        id, err := uuid.Parse(idStr)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+            return
+        }
+
+        var t models.Ticket
+        query := `
+            SELECT id, title, description, priority, status, created_at, updated_at
+            FROM tickets
+            WHERE id = ?
+        `
+        row := db.QueryRow(query, id.String())
+
+        var idRaw string
+        err = row.Scan(
+            &idRaw,
+            &t.Title,
+            &t.Description,
+            &t.Priority,
+            &t.Status,
+            &t.CreatedAt,
+            &t.UpdatedAt,
+        )
+
+        if err == sql.ErrNoRows {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+            return
+        }
+
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ticket"})
+            return
+        }
+
+        t.ID, _ = uuid.Parse(idRaw)
+
+        c.JSON(http.StatusOK, t)
+    }
+}
+
 func CreateTicketHandler(db *sql.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req CreateTicketRequest
@@ -66,7 +149,7 @@ func CreateTicketHandler(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save ticket"})
 		}
-		
+
 		ctx.JSON(http.StatusCreated, ticket)
 	}
 }
