@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main()  {
+func main() {
 	db, err := database.ConnectDB("tickport.db")
 	if err != nil {
 		log.Fatal(err)
@@ -21,13 +21,13 @@ func main()  {
 	defer db.Close()
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
-        AllowOrigins:     []string{"http://localhost:3000", "https://hoppscotch.io"},
-        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
-        ExposeHeaders:    []string{"Content-Length"},
-        AllowCredentials: true,
-        MaxAge: 12 * time.Hour,
-    }))
+		AllowOrigins:     []string{"http://localhost:3000", "https://hoppscotch.io"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
@@ -37,6 +37,8 @@ func main()  {
 	router.GET("/health", handlers.HealthCheckHandler(db))
 	router.GET("/tickets", handlers.GetAllTicketsHandler(db))
 	router.GET("/ticket/:id", handlers.GetTicketByIDHandler(db))
-	router.POST("/tickets", handlers.CreateTicketHandler(db))
+	router.POST("/ticket", handlers.CreateTicketHandler(db))
+	router.PUT("/ticket/:id", handlers.UpdateTicketHandler(db))
+	router.DELETE("/ticket/:id", handlers.DeleteTicketHandler(db))
 	router.Run()
 }
