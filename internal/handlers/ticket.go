@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -16,36 +17,56 @@ type CreateTicketRequest struct {
 	Status      string `json:"status"`
 }
 
-func CreateTicketHandler(c *gin.Context) {
-	var req CreateTicketRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
-		return
+func CreateTicketHandler(db *sql.DB) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req CreateTicketRequest
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
+			return
+		}
+
+		if req.Title == "" || req.Description == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Title and Description are required"})
+			return
+		}
+
+		priority := models.Priority(req.Priority)
+		status := models.Status(req.Status)
+
+		if !priority.IsValid() || !status.IsValid() {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority or status"})
+			return
+		}
+
+		ticket := models.Ticket{
+			ID:          uuid.New(),
+			Title:       req.Title,
+			Description: req.Description,
+			Priority:    priority,
+			Status:      status,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+
+		query := `
+			INSERT INTO tickets (id, title, description, priority, status, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`
+
+		_, err := db.Exec(query,
+			ticket.ID.String(),
+			ticket.Title,
+			ticket.Description,
+			ticket.Priority,
+			ticket.Status,
+			ticket.CreatedAt,
+			ticket.UpdatedAt,
+		)
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save ticket"})
+		}
+		
+		ctx.JSON(http.StatusCreated, ticket)
 	}
-
-	if req.Title == "" || req.Description == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Title and Description are required"})
-		return
-	}
-
-	priority := models.Priority(req.Priority)
-	status := models.Status(req.Status)
-
-	if !priority.IsValid() || !status.IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority or status"})
-		return
-	}
-
-	ticketID := uuid.New()
-	ticket := models.Ticket{
-		ID:          ticketID,
-		Title:       req.Title,
-		Description: req.Description,
-		Priority:    priority,
-		Status:      status,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-
-	c.JSON(http.StatusCreated, ticket)
 }
