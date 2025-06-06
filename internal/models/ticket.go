@@ -23,11 +23,11 @@ type Status string
 const (
 	StatusOpen       Status = "Open"
 	StatusInProgress Status = "In Progress"
-	StatusClose      Status = "Close"
+	StatusClosed      Status = "Closed"
 )
 
 func (s Status) IsValid() bool {
-	return s == StatusOpen || s == StatusInProgress || s == StatusClose
+	return s == StatusOpen || s == StatusInProgress || s == StatusClosed
 }
 
 type Ticket struct {

@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -19,9 +21,61 @@ type CreateTicketRequest struct {
 
 func GetAllTicketsHandler(db *sql.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		rows, err := db.Query(`SELECT * FROM tickets`)
+		status := ctx.Query("status")
+		priority := ctx.Query("priority")
+		sort := ctx.DefaultQuery("sort", "created_at")
+		order := ctx.DefaultQuery("order", "desc")
+
+		if status != "" && !models.Status(status).IsValid() {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status"})
+			log.Printf("Invalid status: %s", status)
+			return
+		}
+
+		if priority != "" && !models.Priority(priority).IsValid() {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority"})		
+			log.Printf("Invalid priority: %s", priority)
+			return
+		}
+
+		allowedSorts := map[string]bool{
+			"created_at": true,
+			"updated_at": true,
+			"title":      true,
+			"priority":   true,
+		}
+
+		if _, ok := allowedSorts[sort]; !ok {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid sort field"})
+			log.Printf("Invalid sort field: %s", sort)
+			return
+		}
+
+		if order != "asc" && order != "desc" {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid order"})
+			log.Printf("Invalid order: %s", order)
+			return
+		}
+
+		query := `SELECT id, title, description, priority, status, created_at, updated_at FROM tickets WHERE 1=1`
+		args := []interface{}{}
+
+		if status != "" {
+			query += ` AND status = ?`
+			args = append(args, status)
+		}
+
+		if priority != "" {
+			query += ` AND priority = ?`
+			args = append(args, priority)
+		}
+
+		query += fmt.Sprintf(` ORDER BY %s %s`, sort, order)
+
+		rows, err := db.Query(query, args...)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tickets"})
+			log.Printf("Error fetching tickets: %v", err)
 		}
 		defer rows.Close()
 
@@ -40,12 +94,14 @@ func GetAllTicketsHandler(db *sql.DB) gin.HandlerFunc {
 				&t.UpdatedAt,
 			); err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan ticket"})
+				log.Printf("Error scanning ticket: %v", err)
 				return
 			}
 
 			t.ID, err = uuid.Parse(idStr)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid UUID"})
+				log.Printf("Error parsing UUID: %v", err)
 				return
 			}
 
