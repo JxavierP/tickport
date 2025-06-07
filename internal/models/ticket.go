@@ -36,6 +36,8 @@ type Ticket struct {
 	Description string    `json:"description"`
 	Priority    Priority  `json:"priority"`
 	Status      Status    `json:"status"`
+	CreatorID   uuid.UUID `json:"creator_id"`
+	AssigneeID  *uuid.UUID `json:"assignee_id"` // Optional, can be nil if not assigned
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
