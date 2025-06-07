@@ -56,17 +56,14 @@ func GetAllTicketsHandler(db *sql.DB) gin.HandlerFunc {
 
 		query := `SELECT id, title, description, priority, status, creator_id, assignee_id, created_at, updated_at FROM tickets WHERE 1=1`
 		args := []interface{}{}
-
 		if status != "" {
 			query += ` AND status = ?`
 			args = append(args, status)
 		}
-
 		if priority != "" {
 			query += ` AND priority = ?`
 			args = append(args, priority)
 		}
-
 		if creatorID != "" {
 			if _, err := uuid.Parse(creatorID); err != nil {
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid creator ID"})
@@ -75,7 +72,6 @@ func GetAllTicketsHandler(db *sql.DB) gin.HandlerFunc {
 			query += ` AND creator_id = ?`
 			args = append(args, creatorID)
 		}
-
 		if assigneeID != "" {
 			if _, err := uuid.Parse(assigneeID); err != nil {
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid assignee ID"})
@@ -121,7 +117,6 @@ func GetAllTicketsHandler(db *sql.DB) gin.HandlerFunc {
 			} else {
 				t.AssigneeID = nil
 			}
-
 			tickets = append(tickets, t)
 		}
 
