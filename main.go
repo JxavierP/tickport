@@ -34,11 +34,17 @@ func main() {
 			"message": "Api is Running",
 		})
 	})
+	
 	router.GET("/health", handlers.HealthCheckHandler(db))
+
 	router.GET("/tickets", handlers.GetAllTicketsHandler(db))
-	router.GET("/ticket/:id", handlers.GetTicketByIDHandler(db))
 	router.POST("/ticket", handlers.CreateTicketHandler(db))
+	router.GET("/ticket/:id", handlers.GetTicketByIDHandler(db))
 	router.PUT("/ticket/:id", handlers.UpdateTicketHandler(db))
 	router.DELETE("/ticket/:id", handlers.DeleteTicketHandler(db))
+
+	router.GET("/users", handlers.GetAllUsersHandler(db))
+	router.GET("/user/:id", handlers.GetUserByIDHandler(db))
+	router.POST("/user", handlers.CreateUserHandler(db))
 	router.Run()
 }
